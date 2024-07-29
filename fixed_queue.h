@@ -179,5 +179,6 @@ private:
     };
 };
 
+#undef ASSERT_LOG
 
 #endif
