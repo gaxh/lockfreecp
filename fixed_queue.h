@@ -37,16 +37,16 @@ public:
         size_t write;
         ElementNode *elem_node;
 
-        write = m_write.load(std::memory_order_acquire);
+        write = m_write.load(std::memory_order_relaxed);
 RETRY:
-        read = m_read.load(std::memory_order_acquire);
+        read = m_read.load(std::memory_order_relaxed);
 
         if(read + Capacity == write) {
             // queue is full
             return false;
         }
 
-        if(!m_write.compare_exchange_strong(write, write + 1u, std::memory_order_acq_rel, std::memory_order_acquire)) {
+        if(!m_write.compare_exchange_strong(write, write + 1u, std::memory_order_relaxed)) {
             // take pos failed
             goto RETRY;
         }
@@ -81,16 +81,16 @@ RETRY:
         size_t write;
         ElementNode *elem_node;
 
-        read = m_read.load(std::memory_order_acquire);
+        read = m_read.load(std::memory_order_relaxed);
 RETRY:
-        write = m_write.load(std::memory_order_acquire);
+        write = m_write.load(std::memory_order_relaxed);
 
         if(read == write) {
             // queue is empty
             return false;
         }
 
-        if(!m_read.compare_exchange_strong(read, read + 1u, std::memory_order_acq_rel, std::memory_order_acquire)) {
+        if(!m_read.compare_exchange_strong(read, read + 1u, std::memory_order_relaxed)) {
             // take pos failed
             goto RETRY;
         }
@@ -128,8 +128,8 @@ RETRY:
     }
 
     size_t ApproximateSize() const {
-        return m_write.load(std::memory_order_acquire) -
-            m_read.load(std::memory_order_acquire);
+        return m_write.load(std::memory_order_relaxed) -
+            m_read.load(std::memory_order_relaxed);
     }
 
 private:
