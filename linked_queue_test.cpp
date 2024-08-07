@@ -1,9 +1,10 @@
-#include "fixed_queue.h"
+#include "linked_queue.h"
 #include <stdio.h>
 #include <thread>
 #include <vector>
 #include <assert.h>
 #include <signal.h>
+
 
 struct Element {
     unsigned long long value = 0;
@@ -26,9 +27,14 @@ int main() {
     signal(SIGINT, sig_handler);
     signal(SIGTERM, sig_handler);
 
-    FixedQueue<Element, 10240> q;
-
-    for(int i = 0; i < 3; ++i) {
+    LinkedQueue<Element> q(2000000);
+/*
+    for(size_t i = 0; i < q.GetCapacity(); ++i) {
+        Element e{123, {"__TAG__", "__ANOTHER_TAG__",}};
+        q.Push(std::move(e));
+    }
+*/
+    for(int i = 0; i < 2; ++i) {
         pushers.emplace_back( new std::thread([&q]() {
                     for(;!stop;) {
                         Element e{123, {"__TAG__", "__ANOTHER_TAG__",}};

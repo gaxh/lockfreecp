@@ -141,8 +141,8 @@ private:
     static constexpr size_t ElementTypeSize = sizeof(ElementType);
 
     struct ElementNode {
-        std::atomic<int> rwref = ATOMIC_VAR_INIT(RWREF_EMPTY);
         alignas(alignof(ElementType)) char buffer[ElementTypeSize];
+        std::atomic<int> rwref = ATOMIC_VAR_INIT(RWREF_EMPTY);
     };
 
     template<typename ... Args>
@@ -173,9 +173,9 @@ private:
     // write finish: RWREF_WRITING -> RWREF_WRITTEN
     enum RWREF_STATUS {
         RWREF_EMPTY = 0,
-        RWREF_READING = 1,
-        RWREF_WRITING = 2,
-        RWREF_WRITTEN = 3,
+        RWREF_READING,
+        RWREF_WRITING,
+        RWREF_WRITTEN,
     };
 };
 
