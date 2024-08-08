@@ -48,7 +48,7 @@ int main() {
                     }) );
     }
 
-    for(int i = 0; i < 3; ++i) {
+    for(int i = 0; i < 4; ++i) {
         popers.emplace_back( new std::thread([&q]() {
                     for(;!stop;) {
                         Element e;
@@ -73,6 +73,8 @@ int main() {
     }
 
     printf("push_success=%llu, pop_success=%llu\n", push_success.load(), pop_success.load());
+
+    q.Clear();
 
     return 0;
 }

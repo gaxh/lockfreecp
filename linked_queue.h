@@ -34,12 +34,12 @@ public:
     }
 
     ~LinkedQueue() {
-        Clear();
+        // Clear();
 
         // deallocate "empty node"
         ElementVersionPointer read = m_read.load(std::memory_order_relaxed);
         ElementVersionPointer write = m_write.load(std::memory_order_relaxed);
-        ASSERT_LOG(read.pointer == write.pointer, "");
+        ASSERT_LOG(read.pointer == write.pointer, "queue is NOT cleared. call Clear() or ClearF() before \"%s\"", __PRETTY_FUNCTION__);
         free_allocate.Deallocate(read.pointer);
     }
 
@@ -49,6 +49,14 @@ public:
 
     template<typename ... Args>
     bool Push(Args && ... args) {
+        return PushF([&args ...](ElementType *elem) {
+                new (elem) ElementType(std::forward<Args>(args) ...);
+                });
+    }
+
+    template<typename Function>
+    // f(ElementType *elem), elem is not constructed
+    bool PushF(Function f) {
         ElementFreeNode *elem_node = free_allocate.Allocate();
 
         if(!elem_node) {
@@ -57,7 +65,7 @@ public:
         }
 
         ElementContainer *elem_container = free_allocate.AccessElementPointerAt(elem_node);
-        new (elem_container->buffer) ElementType(std::forward<Args>(args) ...);
+        f( (ElementType *)elem_container->buffer );
         elem_container->lifetime.store(ELEMENT_LIFETIME_CONSTRUCTED, std::memory_order_relaxed);
 
         ElementVersionPointer next_elem_node = elem_node->next_node.load(std::memory_order_relaxed);
@@ -90,6 +98,18 @@ public:
 
     template<typename OutType>
     bool Pop(OutType *out) {
+        return PopF([out](ElementType *elem) {
+                if(out) {
+                    *out = *elem;
+                }
+
+                elem->~ElementType();
+                });
+    }
+
+    template<typename Function>
+    // f(ElementType *elem), corresponding to PushF()
+    bool PopF(Function f) {
         ElementVersionPointer write;
         ElementVersionPointer read;
         ElementVersionPointer read_next;
@@ -128,13 +148,7 @@ public:
             ok = elem_container->lifetime.compare_exchange_strong(expected, ELEMENT_LIFETIME_READING, std::memory_order_acquire);
             ASSERT_LOG(ok, "element lifetime is invalid: expected=%d, real=%d", ELEMENT_LIFETIME_CONSTRUCTED, expected);
 
-            ElementType *elem = (ElementType *)elem_container->buffer;
-
-            if(out) {
-                *out = *elem;
-            }
-
-            elem->~ElementType();
+            f( (ElementType *)elem_container->buffer );
 
             expected = ELEMENT_LIFETIME_READING;
             ok = elem_container->lifetime.compare_exchange_strong(expected, ELEMENT_LIFETIME_DESTRUCTED, std::memory_order_release);
@@ -170,8 +184,18 @@ public:
         return true;
     }
 
+    template<typename Function>
+    // f is same in PopF()
+    void ClearF(Function f) {
+        while(PopF(f));
+    }
+
     void Clear() {
-        while(Pop<ElementType>(nullptr));
+        auto f = [] (ElementType *elem) {
+            elem->~ElementType();
+        };
+
+        ClearF(f);
     }
 
 private:
