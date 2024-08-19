@@ -115,8 +115,8 @@ public:
         ElementVersionPointer read_next;
 
         for(;;) {
+            write = m_write.load(std::memory_order_acquire);
             read = m_read.load(std::memory_order_relaxed);
-            write = m_write.load(std::memory_order_relaxed);
 
             read_next = read.pointer->next_node.load(std::memory_order_relaxed);
 
